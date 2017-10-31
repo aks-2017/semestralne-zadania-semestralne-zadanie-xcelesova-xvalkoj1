@@ -41,7 +41,7 @@ class DoviTopo( Topo ):
         self.addLink(s6, s9)
         self.addLink(s7, s8)
         self.addLink(s7, s10)
-        self.addLink(s9, s8)
+        self.addLink(s8, s9)
         self.addLink(s9, s10)
         self.addLink(h3, s9)
         self.addLink(h4, s10)
