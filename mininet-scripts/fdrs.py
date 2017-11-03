@@ -1,11 +1,12 @@
 import sys
 from beautifultable import BeautifulTable
+from netaddr import valid_ipv4
 
 def add_rule(rulesdict):
     print ('Follow guide for adding rules\n')
-    source_ip = raw_input('Source IP add: ')
-    dest_ip = raw_input('Destination IP add: ')
-    action = raw_input('Permit/Deny [P/D]: ')
+    source_ip = check_source_ip()
+    dest_ip = check_dest_ip()
+    action = check_action()
     protocol = raw_input('IP/ICMP/TCP/UDP/HTTP:')
 
     key = (source_ip,dest_ip)
@@ -32,10 +33,35 @@ def show_rule(rulesdict):
                 table.append_row([key[0], key[1], i[0], i[1]])
         print table
 
+def check_source_ip():
+    while True:
+        source_ip = raw_input('Source IP add: ')
+        if valid_ipv4(source_ip):
+            return source_ip
+        else:
+            print 'Not a valid IP address !'
+
+def check_dest_ip():
+    while True:
+        dest_ip = raw_input('Destination IP add: ')
+        if valid_ipv4(dest_ip):
+            return dest_ip
+        else:
+            print 'Not a valid IP address !'
+
+def check_action():
+    while True:
+        action = raw_input('Permit or Deny [P/D] ')
+        if action == 'p' or action == 'P' or action == 'd' or action == 'D':
+            return action
+        else:
+            print 'Incorrect input !'
+
+
 def remove_rule(rulesdict):
-    source_ip = raw_input('Source IP add: ')
-    dest_ip = raw_input('Destination IP add: ')
-    action = raw_input('Permit/Deny [P/D]: ')
+    source_ip = check_source_ip()
+    dest_ip = check_dest_ip()
+    action = check_action()
     protocol = raw_input('IP/ICMP/TCP/UDP/HTTP:')
 
     if not source_ip and not dest_ip and not action and not protocol:
@@ -88,9 +114,9 @@ def delete_value(items, rulesdict, data):
         print 'Deleted !'
 
 def find_rule(rulesdict):
-    source_ip = raw_input('Source IP add: ')
-    dest_ip = raw_input('Destination IP add: ')
-    action = raw_input('Permit/Deny [P/D]: ')
+    source_ip = check_source_ip()
+    dest_ip = check_dest_ip()
+    action = check_action()
     protocol = raw_input('IP/ICMP/TCP/UDP/HTTP:')
 
     table = BeautifulTable()
@@ -183,3 +209,6 @@ print ('*********************** Firewall *************************')
 print ('***  ***  ***  ***  ***  ***  ***  ***  ***  ***  ***  ***\n')
 
 main()
+
+#TODO reading from file, check consistency of input data{IP done /what if was enter pressed ?/, P/D done, protocols needed ?}, storing to file (?)
+
