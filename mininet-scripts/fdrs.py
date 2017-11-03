@@ -1,7 +1,6 @@
 import sys
 from beautifultable import BeautifulTable
 
-
 def add_rule(rulesdict):
     source_ip = raw_input('Source IP add: ')
     dest_ip = raw_input('Destination IP add: ')
@@ -41,16 +40,56 @@ def remove_rule(rulesdict):
     if not source_ip and not dest_ip and not action and not protocol:
         print 'Please specify at least one atribute.'
 
+    #Input: Source IP not destination IP
     elif source_ip and not dest_ip:
         for items in rulesdict.keys():
             if source_ip in items[0]:
-                print 'Deleted rule/s '+items[0], items[1], rulesdict[items[0],items[1]]
-                del rulesdict[items[0], items[1]]
+                if action or protocol:
+                    values_check(items, rulesdict,action, protocol)
+                else:
+                    for data in rulesdict[items]:
+                        delete_value(items, rulesdict, data)
+
+    # Input: Destination IP not source IP
     elif dest_ip and not source_ip:
         for items in rulesdict.keys():
             if dest_ip in items[1]:
-                print 'Deleted rule/s '+items[0], items[1], rulesdict[items[0], items[1]]
-                del rulesdict[items[0], items[1]]
+                if action or protocol:
+                    values_check(items, rulesdict,action, protocol)
+                else:
+                    for data in rulesdict[items]:
+                        delete_value(items, rulesdict, data)
+
+    #Input: Source and destination IP
+    elif source_ip and dest_ip:
+        for items in rulesdict.keys():
+            if source_ip in items[0] and dest_ip in items[1]:
+                if action or protocol:
+                    values_check(items, rulesdict,action, protocol)
+                else:
+                    for data in rulesdict[items]:
+                        delete_value(items, rulesdict, data)
+
+    #Input: Action or protocol
+    else:
+        for items in rulesdict.keys():
+            values_check(items, rulesdict, action, protocol)
+
+def values_check(items, rulesdict,action, protocol):
+    for data in rulesdict[items]:
+        if action in data[0] and protocol in data[1]:
+            delete_value(items, rulesdict, data)
+        elif action in data[0] and not protocol:
+            delete_value(items, rulesdict, data)
+        elif not action and protocol in data[1]:
+            delete_value(items, rulesdict, data)
+
+def delete_value(items, rulesdict, data):
+    print items[0], items[1], data[0], data[1]
+    flag = raw_input('Do you want to delete [Y/N] ')
+    if flag == 'Y' or flag == 'y':
+        rulesdict[items].remove(data)
+        print 'Deleted !'
 
 
 def main():
