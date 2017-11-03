@@ -44,36 +44,31 @@ def remove_rule(rulesdict):
     elif source_ip and not dest_ip:
         for items in rulesdict.keys():
             if source_ip in items[0]:
-                if action or protocol:
-                    values_check(items, rulesdict,action, protocol)
-                else:
-                    for data in rulesdict[items]:
-                        delete_value(items, rulesdict, data)
+                find_value(items, rulesdict, action, protocol)
 
     # Input: Destination IP not source IP
     elif dest_ip and not source_ip:
         for items in rulesdict.keys():
             if dest_ip in items[1]:
-                if action or protocol:
-                    values_check(items, rulesdict,action, protocol)
-                else:
-                    for data in rulesdict[items]:
-                        delete_value(items, rulesdict, data)
+                find_value(items, rulesdict, action, protocol)
 
     #Input: Source and destination IP
     elif source_ip and dest_ip:
         for items in rulesdict.keys():
             if source_ip in items[0] and dest_ip in items[1]:
-                if action or protocol:
-                    values_check(items, rulesdict,action, protocol)
-                else:
-                    for data in rulesdict[items]:
-                        delete_value(items, rulesdict, data)
+                find_value(items, rulesdict, action, protocol)
 
     #Input: Action or protocol
     else:
         for items in rulesdict.keys():
             values_check(items, rulesdict, action, protocol)
+
+def find_value(items, rulesdict, action, protocol):
+    if action or protocol:
+        values_check(items, rulesdict, action, protocol)
+    else:
+        for data in rulesdict[items]:
+            delete_value(items, rulesdict, data)
 
 def values_check(items, rulesdict,action, protocol):
     for data in rulesdict[items]:
