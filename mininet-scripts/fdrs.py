@@ -2,6 +2,7 @@ import sys
 from beautifultable import BeautifulTable
 
 def add_rule(rulesdict):
+    print ('Follow guide for adding rules\n')
     source_ip = raw_input('Source IP add: ')
     dest_ip = raw_input('Destination IP add: ')
     action = raw_input('Permit/Deny [P/D]: ')
@@ -44,33 +45,33 @@ def remove_rule(rulesdict):
     elif source_ip and not dest_ip:
         for items in rulesdict.keys():
             if source_ip in items[0]:
-                find_value(items, rulesdict, action, protocol)
+                find_value_for_delete(items, rulesdict, action, protocol)
 
     # Input: Destination IP not source IP
     elif dest_ip and not source_ip:
         for items in rulesdict.keys():
             if dest_ip in items[1]:
-                find_value(items, rulesdict, action, protocol)
+                find_value_for_delete(items, rulesdict, action, protocol)
 
     #Input: Source and destination IP
     elif source_ip and dest_ip:
         for items in rulesdict.keys():
             if source_ip in items[0] and dest_ip in items[1]:
-                find_value(items, rulesdict, action, protocol)
+                find_value_for_delete(items, rulesdict, action, protocol)
 
     #Input: Action or protocol
     else:
         for items in rulesdict.keys():
-            values_check(items, rulesdict, action, protocol)
+            values_check_for_delete(items, rulesdict, action, protocol)
 
-def find_value(items, rulesdict, action, protocol):
+def find_value_for_delete(items, rulesdict, action, protocol):
     if action or protocol:
-        values_check(items, rulesdict, action, protocol)
+        values_check_for_delete(items, rulesdict, action, protocol)
     else:
         for data in rulesdict[items]:
             delete_value(items, rulesdict, data)
 
-def values_check(items, rulesdict,action, protocol):
+def values_check_for_delete(items, rulesdict,action, protocol):
     for data in rulesdict[items]:
         if action in data[0] and protocol in data[1]:
             delete_value(items, rulesdict, data)
@@ -86,6 +87,60 @@ def delete_value(items, rulesdict, data):
         rulesdict[items].remove(data)
         print 'Deleted !'
 
+def find_rule(rulesdict):
+    source_ip = raw_input('Source IP add: ')
+    dest_ip = raw_input('Destination IP add: ')
+    action = raw_input('Permit/Deny [P/D]: ')
+    protocol = raw_input('IP/ICMP/TCP/UDP/HTTP:')
+
+    table = BeautifulTable()
+    table.column_headers = ["Source IP", "Destination IP", "Permit/Deny", "Protocol"]
+
+    if not source_ip and not dest_ip and not action and not protocol:
+        print 'Please specify at least one atribute.'
+
+    # Input: Source IP not destination IP
+    elif source_ip and not dest_ip:
+        for items in rulesdict.keys():
+            if source_ip in items[0]:
+                find_value(items, rulesdict, action, protocol, table)
+
+    # Input: Destination IP not source IP
+    elif dest_ip and not source_ip:
+        for items in rulesdict.keys():
+            if dest_ip in items[1]:
+                find_value(items, rulesdict, action, protocol, table)
+
+    # Input: Source and destination IP
+    elif source_ip and dest_ip:
+        for items in rulesdict.keys():
+            if source_ip in items[0] and dest_ip in items[1]:
+                find_value(items, rulesdict, action, protocol, table)
+
+    # Input: Action or protocol
+    else:
+        for items in rulesdict.keys():
+            values_check(items, rulesdict, action, protocol, table)
+
+    print table
+
+
+def find_value(items, rulesdict, action, protocol,table):
+    if action or protocol:
+        values_check(items, rulesdict, action, protocol, table)
+    else:
+        for data in rulesdict[items]:
+            table.append_row([items[0], items[1], data[0], data[1]])
+
+
+def values_check(items, rulesdict,action, protocol, table):
+    for data in rulesdict[items]:
+        if action in data[0] and protocol in data[1]:
+            table.append_row([items[0], items[1], data[0], data[1]])
+        elif action in data[0] and not protocol:
+            table.append_row([items[0], items[1], data[0], data[1]])
+        elif not action and protocol in data[1]:
+            table.append_row([items[0], items[1], data[0], data[1]])
 
 def main():
     rulesdict = {}
@@ -104,17 +159,18 @@ def main():
     rulesdict[key] = [data]
 
     while(1):
-        prepinac = raw_input('Write required command or -h for help\n')
+        prepinac = raw_input('\nWrite required command or -h for help\n')
 
         if 'h' in prepinac:
-            print ('Select from these commands:\n\t-a\tadd rule to firewall\n\t-r\tremove rule from firewall\n\t-s\tshow all rules\n\t-x\texit\n')
+            print ('Select from these commands:\n\t-a\tadd rule to firewall\n\t-r\tremove rule from firewall\n\t-s\tshow all rules\n\t-f\tfind rule\n\t-x\texit\n')
         elif 'a' in prepinac:
-            print ('Follow guide for adding rules\n')
             add_rule(rulesdict)
         elif 'r' in prepinac:
             remove_rule(rulesdict)
         elif 's' in prepinac:
             show_rule(rulesdict)
+        elif 'f' in prepinac:
+            find_rule(rulesdict)
         elif 'x' in prepinac:
             print ('Successfully finished')
             sys.exit()
