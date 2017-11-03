@@ -32,6 +32,26 @@ def show_rule(rulesdict):
                 table.append_row([key[0], key[1], i[0], i[1]])
         print table
 
+def remove_rule(rulesdict):
+    source_ip = raw_input('Source IP add: ')
+    dest_ip = raw_input('Destination IP add: ')
+    action = raw_input('Permit/Deny [P/D]: ')
+    protocol = raw_input('IP/ICMP/TCP/UDP/HTTP:')
+
+    if not source_ip and not dest_ip and not action and not protocol:
+        print 'Please specify at least one atribute.'
+
+    elif source_ip and not dest_ip:
+        for items in rulesdict.keys():
+            if source_ip in items[0]:
+                print 'Deleted rule/s '+items[0], items[1], rulesdict[items[0],items[1]]
+                del rulesdict[items[0], items[1]]
+    elif dest_ip and not source_ip:
+        for items in rulesdict.keys():
+            if dest_ip in items[1]:
+                print 'Deleted rule/s '+items[0], items[1], rulesdict[items[0], items[1]]
+                del rulesdict[items[0], items[1]]
+
 
 def main():
     rulesdict = {}
@@ -58,7 +78,7 @@ def main():
             print ('Follow guide for adding rules\n')
             add_rule(rulesdict)
         elif 'r' in prepinac:
-            print ('No rules to be deleted at this point')
+            remove_rule(rulesdict)
         elif 's' in prepinac:
             show_rule(rulesdict)
         elif 'x' in prepinac:
