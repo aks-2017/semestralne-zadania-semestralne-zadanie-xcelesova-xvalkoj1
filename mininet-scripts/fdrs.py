@@ -1,12 +1,14 @@
 import sys
+from beautifultable import BeautifulTable
+
 
 def add_rule(rulesdict):
-    sourceIP = raw_input('Source IP add: ')
-    destIP = raw_input('Destination IP add: ')
+    source_ip = raw_input('Source IP add: ')
+    dest_ip = raw_input('Destination IP add: ')
     action = raw_input('Permit/Deny [P/D]: ')
     protocol = raw_input('IP/ICMP/TCP/UDP/HTTP:')
 
-    key = (sourceIP,destIP)
+    key = (source_ip,dest_ip)
     data = (action,protocol)
 
     if key not in rulesdict:
@@ -19,13 +21,16 @@ def add_rule(rulesdict):
         print('\nSame rule already exist\n')
 
 def show_rule(rulesdict):
+    table = BeautifulTable()
     if not rulesdict:
         print 'There are not any rules stored'
     else:
-        print ('These are our stored rules\n')
+        print ('These are our stored rules')
+        table.column_headers = ["Source IP", "Destination IP", "Permit/Deny", "Protocol"]
         for key in rulesdict:
             for i in rulesdict[key]:
-                print key[0], key[1], i[0], i[1]
+                table.append_row([key[0], key[1], i[0], i[1]])
+        print table
 
 
 def main():
@@ -40,7 +45,7 @@ def main():
     data = ('D', 'UDP')
     rulesdict[key].append(data)
 
-    key = ('3.3.3.3', '4.4.4.4')
+    key = ('192.168.10.3', '100.20.20.2')
     data = ('D', 'HTTP')
     rulesdict[key] = [data]
 
