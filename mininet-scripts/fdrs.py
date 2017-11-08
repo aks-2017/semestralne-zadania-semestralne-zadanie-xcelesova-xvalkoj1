@@ -4,10 +4,10 @@ from netaddr import valid_ipv4
 
 def add_rule(rulesdict):
     print ('Follow guide for adding rules\n')
-    source_ip = check_source_ip()
-    dest_ip = check_dest_ip()
-    action = check_action()
-    protocol = raw_input('IP/ICMP/TCP/UDP/HTTP:')
+    source_ip = check_source_ip('a')
+    dest_ip = check_dest_ip('a')
+    action = check_action('a')
+    protocol = check_protocol('a')
 
     key = (source_ip,dest_ip)
     data = (action,protocol)
@@ -33,30 +33,56 @@ def show_rule(rulesdict):
                 table.append_row([key[0], key[1], i[0], i[1]])
         print table
 
-def check_source_ip():
+def check_source_ip(flag):
     while True:
         source_ip = raw_input('Source IP add: ')
-        if valid_ipv4(source_ip):
+        if not source_ip:
+            if flag == 'f':
+                return source_ip
+            print 'Not a valid IP address !'
+        elif valid_ipv4(source_ip):
             return source_ip
         else:
             print 'Not a valid IP address !'
 
-def check_dest_ip():
+def check_dest_ip(flag):
     while True:
         dest_ip = raw_input('Destination IP add: ')
-        if valid_ipv4(dest_ip):
+        if not dest_ip:
+            if flag == 'f':
+                return dest_ip
+            print 'Not a valid IP address !'
+        elif valid_ipv4(dest_ip):
             return dest_ip
         else:
             print 'Not a valid IP address !'
 
-def check_action():
+def check_action(flag):
     while True:
-        action = raw_input('Permit or Deny [P/D] ')
-        if action == 'p' or action == 'P' or action == 'd' or action == 'D':
+        action = raw_input('Permit or Deny [P/D] ').upper()
+
+        if action == 'P' or action == 'D':
             return action
+        elif not action:
+            if flag == 'f':
+                return action
+            else:
+                print 'Incorrenct input !'
         else:
             print 'Incorrect input !'
 
+def check_protocol(flag):
+    while True:
+        protocol = raw_input('IP/ICMP/TCP/UDP/HTTP:').upper()
+        if protocol == "IP" or protocol == "ICMP" or protocol == "TCP" or protocol == "UDP" or protocol == "HTTP":
+            return protocol
+        elif not protocol:
+            if flag == 'f':
+                return protocol
+            else:
+                print 'Incorrenct input !'
+        else:
+            print 'Incorrenct input !'
 
 def remove_rule(rulesdict):
     source_ip = check_source_ip()
@@ -114,10 +140,10 @@ def delete_value(items, rulesdict, data):
         print 'Deleted !'
 
 def find_rule(rulesdict):
-    source_ip = check_source_ip()
-    dest_ip = check_dest_ip()
-    action = check_action()
-    protocol = raw_input('IP/ICMP/TCP/UDP/HTTP:')
+    source_ip = check_source_ip('f')
+    dest_ip = check_dest_ip('f')
+    action = check_action('f')
+    protocol = check_protocol('f')
 
     table = BeautifulTable()
     table.column_headers = ["Source IP", "Destination IP", "Permit/Deny", "Protocol"]
@@ -210,5 +236,5 @@ print ('***  ***  ***  ***  ***  ***  ***  ***  ***  ***  ***  ***\n')
 
 main()
 
-#TODO reading from file, check consistency of input data{IP done /what if was enter pressed ?/, P/D done, protocols needed ?}, storing to file (?)
+#TODO reading from file, storing to file (?)
 
