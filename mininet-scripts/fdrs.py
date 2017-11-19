@@ -1,8 +1,11 @@
 import sys
+import numpy as np
 from beautifultable import BeautifulTable
 from netaddr import valid_ipv4
 
+
 def add_rule(rulesdict):
+
     print ('Follow guide for adding rules\n')
     source_ip = check_source_ip('a')
     dest_ip = check_dest_ip('a')
@@ -14,9 +17,11 @@ def add_rule(rulesdict):
 
     if key not in rulesdict:
         rulesdict[key] = [data]
+        np.save('stored_rules.npy', rulesdict)
         print('\nRule successfully stored\n')
     elif data not in rulesdict[key]:
         rulesdict[key].append(data)
+        np.save('stored_rules.npy', rulesdict)
         print('\nRule successfully stored\n')
     else:
         print('\nSame rule already exist\n')
@@ -85,10 +90,10 @@ def check_protocol(flag):
             print 'Incorrenct input !'
 
 def remove_rule(rulesdict):
-    source_ip = check_source_ip()
-    dest_ip = check_dest_ip()
-    action = check_action()
-    protocol = raw_input('IP/ICMP/TCP/UDP/HTTP:')
+    source_ip = check_source_ip('f')
+    dest_ip = check_dest_ip('f')
+    action = check_action('f')
+    protocol = check_protocol('f')
 
     if not source_ip and not dest_ip and not action and not protocol:
         print 'Please specify at least one atribute.'
@@ -134,10 +139,20 @@ def values_check_for_delete(items, rulesdict,action, protocol):
 
 def delete_value(items, rulesdict, data):
     print items[0], items[1], data[0], data[1]
-    flag = raw_input('Do you want to delete [Y/N] ')
-    if flag == 'Y' or flag == 'y':
-        rulesdict[items].remove(data)
-        print 'Deleted !'
+    flag = raw_input('Do you want to delete [Y/N] ').upper()
+    while 1 :
+        if flag == 'Y':
+            rulesdict[items].remove(data)
+            if not rulesdict[items]:
+                del rulesdict[items]
+            print 'Deleted !'       #TODO vymazat aj ak to bol posledny zaznam
+            break
+        elif flag == 'N':
+            break
+        print "Incorrect input"
+        flag = raw_input('Do you want to delete [Y/N] ').upper()
+
+
 
 def find_rule(rulesdict):
     source_ip = check_source_ip('f')
@@ -198,19 +213,27 @@ def main():
     rulesdict = {}
 
     #Hard coded data just for info
-    key = ('1.1.1.1', '2.2.2.2')
-    data = ('P', 'IP')
-    rulesdict[key] = [data]
+    #key = ('1.1.1.1', '2.2.2.2')
+    #data = ('P', 'IP')
+    #rulesdict[key] = [data]
 
-    key = ('1.1.1.1', '2.2.2.2')
-    data = ('D', 'UDP')
-    rulesdict[key].append(data)
+    #key = ('1.1.1.1', '2.2.2.2')
+    #data = ('D', 'UDP')
+    #rulesdict[key].append(data)
 
-    key = ('192.168.10.3', '100.20.20.2')
-    data = ('D', 'HTTP')
-    rulesdict[key] = [data]
+    #key = ('192.168.10.3', '100.20.20.2')
+    #data = ('D', 'HTTP')
+    #rulesdict[key] = [data]
+    try:
+        rulesdict = np.load('stored_rules.npy').item()
+
+    except:
+        np.save('stored_rules.npy', rulesdict)
+
 
     while(1):
+
+
         prepinac = raw_input('\nWrite required command or -h for help\n')
 
         if 'h' in prepinac:
@@ -219,10 +242,14 @@ def main():
             add_rule(rulesdict)
         elif 'r' in prepinac:
             remove_rule(rulesdict)
+            np.save('stored_rules.npy', rulesdict)
         elif 's' in prepinac:
             show_rule(rulesdict)
         elif 'f' in prepinac:
             find_rule(rulesdict)
+        elif 'l' in prepinac:
+            rulesdict = np.load('stored_rules.npy').item()
+            print rulesdict
         elif 'x' in prepinac:
             print ('Successfully finished')
             sys.exit()
