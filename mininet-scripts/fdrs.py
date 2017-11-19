@@ -1,4 +1,10 @@
+import socket
+import struct
 import sys
+
+import thread
+
+import pickle
 from beautifultable import BeautifulTable
 from netaddr import valid_ipv4
 
@@ -194,7 +200,45 @@ def values_check(items, rulesdict,action, protocol, table):
         elif not action and protocol in data[1]:
             table.append_row([items[0], items[1], data[0], data[1]])
 
+def send_one_message(sock, data):
+    length = len(data)
+    sock.send(struct.pack('!I', length))
+    sock.send(data)
+
+def recv_one_message(sock):
+    lengthbuf = recvall(sock, 4)
+    length, = struct.unpack('!I', lengthbuf)
+    return recvall(sock, length)
+
+def recvall(sock, count):
+    buf = b''
+    while count:
+        newbuf = sock.recv(count)
+        if not newbuf: return None
+        buf += newbuf
+        count -= len(newbuf)
+    return buf
+
+def serverSocket(rulesdict):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Vytvorenie soketu
+    host = socket.gethostname()  # Nazov lokalneho stroja
+    port = 1508  # Rezervovanie portu pre komunikaciu
+    s.bind((host, port))  # Priradenie hosta na port
+
+    while True:
+        s.listen(5)  # Cakanie na pripojenie klienta
+        print 'Waiting for connection...'
+        c, addr = s.accept()  # Vytvorenie spojenia s klientom
+        try:
+            print 'Got connection from', addr
+            data = pickle.dumps(rulesdict)
+            send_one_message(c,data)
+        finally:
+            c.close()
+            print 'Client disconnected'
+
 def main():
+
     rulesdict = {}
 
     #Hard coded data just for info
@@ -209,6 +253,8 @@ def main():
     key = ('192.168.10.3', '100.20.20.2')
     data = ('D', 'HTTP')
     rulesdict[key] = [data]
+
+    thread.start_new_thread(serverSocket, (rulesdict, ))
 
     while(1):
         prepinac = raw_input('\nWrite required command or -h for help\n')
