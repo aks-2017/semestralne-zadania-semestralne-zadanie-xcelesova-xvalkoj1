@@ -1,10 +1,9 @@
+import Queue
 import socket
 import struct
-
+import threading
 import time
-
 import thread
-
 import pickle
 from ryu.base import app_manager
 from ryu.controller import ofp_event
@@ -13,8 +12,8 @@ from ryu.controller.handler import set_ev_cls
 from ryu.ofproto import ofproto_v1_4
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
+from ryu.lib.packet import ipv4
 from ryu.lib.packet import ether_types
-
 
 def send_one_message(sock, data):
     length = len(data)
@@ -37,7 +36,7 @@ def recvall(sock, count):
         count -= len(newbuf)
     return buf
 
-def clientSocket():
+def clientSocket(queue):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Create a socket object
     host = socket.gethostname()  # Get local machine name
     port = 1508  # Reserve a port for your service.
@@ -47,12 +46,10 @@ def clientSocket():
         print 'Connected to FDRS'
         data = recv_one_message(s)
         rulesdict = pickle.loads(data)
-        print rulesdict
+        queue.put(rulesdict)
     finally:
         s.close  # Close the socket when done
         print 'Socket closed'
-
-thread.start_new_thread(clientSocket, ())
 
 class SimpleSwitch14(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_4.OFP_VERSION]
@@ -60,6 +57,11 @@ class SimpleSwitch14(app_manager.RyuApp):
     def __init__(self, *args, **kwargs):
         super(SimpleSwitch14, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
+        queue = Queue.Queue()
+        myThread = threading.Thread(target=clientSocket, args=(queue,),)
+        myThread.start()
+        myThread.join()
+        self.rulesdict = queue.get()
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
@@ -97,9 +99,21 @@ class SimpleSwitch14(app_manager.RyuApp):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         in_port = msg.match['in_port']
+        policy = 0
 
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocols(ethernet.ethernet)[0]
+        ipv4Prot = pkt.get_protocol(ipv4.ipv4)
+
+        if ipv4Prot is not None:
+            for item in self.rulesdict.keys():
+                if ipv4Prot.src in item[0] and ipv4Prot.dst in item[1]:
+                    policy = 1
+                    break
+
+        #if policy:
+            #TODO according to https://stackoverflow.com/questions/41023354/ryu-controller-drop-packet
+            #match = parser.OFPMatch()
 
         if eth.ethertype == ether_types.ETH_TYPE_LLDP:
             # ignore lldp packet
@@ -110,7 +124,7 @@ class SimpleSwitch14(app_manager.RyuApp):
         dpid = datapath.id
         self.mac_to_port.setdefault(dpid, {})
 
-        self.logger.info("packet in %s %s %s %s", dpid, src, dst, in_port)
+        #self.logger.info("packet in %s %s %s %s", dpid, src, dst, in_port)
 
         # learn a mac address to avoid FLOOD next time.
         self.mac_to_port[dpid][src] = in_port
