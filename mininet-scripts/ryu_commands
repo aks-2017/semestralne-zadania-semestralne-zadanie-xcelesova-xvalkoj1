@@ -1,0 +1,2 @@
+sudo ovs-ofctl -O OpenFlow14 dump-flows [switchid]
+

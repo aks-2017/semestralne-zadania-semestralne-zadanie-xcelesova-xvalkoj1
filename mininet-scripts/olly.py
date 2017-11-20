@@ -92,6 +92,16 @@ class SimpleSwitch14(app_manager.RyuApp):
                                 match=match, instructions=inst)
         datapath.send_msg(mod)
 
+    def apply_policy(self, datapath, priority, match):
+        ofproto = datapath.ofproto
+        parser = datapath.ofproto_parser
+
+        inst = [parser.OFPInstructionActions(ofproto.OFPIT_CLEAR_ACTIONS, [])]
+
+        mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
+                                match=match, instructions=inst)
+        datapath.send_msg(mod)
+
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
         msg = ev.msg
@@ -111,10 +121,6 @@ class SimpleSwitch14(app_manager.RyuApp):
                     policy = 1
                     break
 
-        #if policy:
-            #TODO according to https://stackoverflow.com/questions/41023354/ryu-controller-drop-packet
-            #match = parser.OFPMatch()
-
         if eth.ethertype == ether_types.ETH_TYPE_LLDP:
             # ignore lldp packet
             return
@@ -124,10 +130,15 @@ class SimpleSwitch14(app_manager.RyuApp):
         dpid = datapath.id
         self.mac_to_port.setdefault(dpid, {})
 
-        #self.logger.info("packet in %s %s %s %s", dpid, src, dst, in_port)
+        self.logger.info("packet in %s %s %s %s", dpid, src, dst, in_port)
 
         # learn a mac address to avoid FLOOD next time.
         self.mac_to_port[dpid][src] = in_port
+
+        if policy:
+            match = parser.OFPMatch(in_port=in_port, eth_src=src, eth_dst=dst)
+            self.apply_policy(datapath, 1, match)
+            return
 
         if dst in self.mac_to_port[dpid]:
             out_port = self.mac_to_port[dpid][dst]
