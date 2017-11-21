@@ -204,7 +204,7 @@ def find_value(items, rulesdict, action, protocol,table):
             table.append_row([items[0], items[1], data[0], data[1]])
 
 
-def values_check(items, rulesdict,action, protocol, table):
+def values_check(items, rulesdict, action, protocol, table):
     for data in rulesdict[items]:
         if action in data[0] and protocol in data[1]:
             table.append_row([items[0], items[1], data[0], data[1]])

@@ -118,8 +118,10 @@ class SimpleSwitch14(app_manager.RyuApp):
         if ipv4Prot is not None:
             for item in self.rulesdict.keys():
                 if ipv4Prot.src in item[0] and ipv4Prot.dst in item[1]:
-                    policy = 1
-                    break
+                    for data in self.rulesdict[item]:
+                        if data[0] == 'D':
+                            policy = 1
+                        break
 
         if eth.ethertype == ether_types.ETH_TYPE_LLDP:
             # ignore lldp packet
