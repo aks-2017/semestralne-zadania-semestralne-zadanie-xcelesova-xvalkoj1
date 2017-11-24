@@ -288,9 +288,9 @@ def main():
             show_rule(rulesdict)
         elif 'f' in prepinac:
             find_rule(rulesdict)
-        elif 'l' in prepinac:
-            rulesdict = np.load('stored_rules.npy').item()
-            print rulesdict
+        #elif 'l' in prepinac:
+        #    rulesdict = np.load('stored_rules.npy').item()
+        #    print rulesdict
         elif 'x' in prepinac:
             print ('Successfully finished')
             sys.exit()
