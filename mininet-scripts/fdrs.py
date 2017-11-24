@@ -82,8 +82,8 @@ def check_action(flag):
 
 def check_protocol(flag):
     while True:
-        protocol = raw_input('IP/ICMP/TCP/UDP/HTTP:').upper()
-        if protocol == "IP" or protocol == "ICMP" or protocol == "TCP" or protocol == "UDP" or protocol == "HTTP":
+        protocol = raw_input('IP/ICMP/TCP/UDP:').upper()
+        if protocol == "IP" or protocol == "ICMP" or protocol == "TCP" or protocol == "UDP":
             return protocol
         elif not protocol:
             if flag == 'f':
@@ -149,7 +149,7 @@ def delete_value(items, rulesdict, data):
             rulesdict[items].remove(data)
             if not rulesdict[items]:
                 del rulesdict[items]
-            print 'Deleted !'       #TODO vymazat aj ak to bol posledny zaznam
+            print 'Deleted !'
             break
         elif flag == 'N':
             break
@@ -263,9 +263,6 @@ def main():
     #data = ('D', 'UDP')
     #rulesdict[key].append(data)
 
-    #key = ('192.168.10.3', '100.20.20.2')
-    #data = ('D', 'HTTP')
-    #rulesdict[key] = [data]
     try:
         rulesdict = np.load('stored_rules.npy').item()
 
