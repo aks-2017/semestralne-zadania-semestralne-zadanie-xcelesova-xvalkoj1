@@ -6,7 +6,7 @@ import pickle
 import numpy as np
 from beautifultable import BeautifulTable
 from netaddr import valid_ipv4
-
+import zmq
 
 def add_rule(rulesdict):
 
@@ -251,6 +251,9 @@ def serverSocket(rulesdict):
             print 'Client disconnected'
 
 def main():
+    context = zmq.Context()
+    socket = context.socket(zmq.PUB)
+    socket.bind("tcp://127.0.0.1:1508")
 
     rulesdict = {}
 

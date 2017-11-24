@@ -9,6 +9,7 @@ from ryu.base import app_manager
 from ryu.controller import ofp_event
 from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER
 from ryu.controller.handler import set_ev_cls
+from ryu.lib.packet import arp
 from ryu.lib.packet import ethernet
 from ryu.lib.packet import icmp
 from ryu.lib.packet import in_proto
@@ -91,24 +92,17 @@ class SimpleSwitch14(app_manager.RyuApp):
         match = parser.OFPMatch()
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
                                           ofproto.OFPCML_NO_BUFFER)]
-        self.add_flow(datapath, 0, match, actions)
+        self.add_flow(datapath, 0, match, actions, 0)
 
-    def add_flow(self, datapath, priority, match, actions):
+    def add_flow(self, datapath, priority, match, actions, policy):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
 
-        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
-                                             actions)]
-
-        mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
-                                match=match, instructions=inst)
-        datapath.send_msg(mod)
-
-    def apply_policy(self, datapath, priority, match):
-        ofproto = datapath.ofproto
-        parser = datapath.ofproto_parser
-
-        inst = [parser.OFPInstructionActions(ofproto.OFPIT_CLEAR_ACTIONS, [])]
+        if policy:
+            inst = [parser.OFPInstructionActions(ofproto.OFPIT_CLEAR_ACTIONS, [])]
+        else:
+            inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
+                                                 actions)]
 
         mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
                                 match=match, instructions=inst)
@@ -125,46 +119,12 @@ class SimpleSwitch14(app_manager.RyuApp):
 
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocols(ethernet.ethernet)[0]
+        ipv4_proto = pkt.get_protocol(ipv4.ipv4)
+        arp_proto = pkt.get_protocol(arp.arp)
 
-        if eth.ethertype == ether_types.ETH_TYPE_IP:
-            ipv4_proto = pkt.get_protocol(ipv4.ipv4)
-            #print ipv4_proto
-            if ipv4_proto is not None:
-                for item in self.rulesdict.keys():
-                    if ipv4_proto.src in item[0] and ipv4_proto.dst in item[1]:
-                        for data in self.rulesdict[item]:
-                            #print data
-                            if data[1] == "IP" and data[0] == 'D':
-                                proto_in_packet = in_proto.IPPROTO_IP
-                                policy = 1
-                                print "IP packet blocked"
-                                break
-                            if data[1] == "ICMP":
-                                icmp_proto = pkt.get_protocol(icmp.icmp)
-                                if icmp_proto is not None and data[0] == 'D':
-                                    proto_in_packet = in_proto.IPPROTO_ICMP
-                                    policy = 1
-                                    print "ICMP packet blocked"
-                                    break
-                            if data[1] == "TCP":
-                                tcp_proto = pkt.get_protocol(tcp.tcp)
-                                if tcp_proto is not None and data[0] == 'D':
-                                    proto_in_packet = in_proto.IPPROTO_TCP
-                                    policy = 1
-                                    print "TCP packet blocked"
-                                    break
-                            if data[1] == "UDP":
-                                udp_proto = pkt.get_protocol(udp.udp)
-                                if udp_proto is not None and data[0] == 'D':
-                                    proto_in_packet = in_proto.IPPROTO_UDP
-                                    policy = 1
-                                    print "UDP packet blocked"
-                                    break
-                            # if data[1] == "HTTP":
-                            #     http_proto = pkt.get_protocol(http.http)
-                            #     if http_proto is not None and data[0] == 'D':
-                            #         policy = 1
-                            #     break
+        # if ipv4_proto is not None and datapath.id == 3:
+        #     print pkt
+        #     print ""
 
         if eth.ethertype == ether_types.ETH_TYPE_LLDP:
             # ignore lldp packet
@@ -180,17 +140,6 @@ class SimpleSwitch14(app_manager.RyuApp):
         # learn a mac address to avoid FLOOD next time.
         self.mac_to_port[dpid][src] = in_port
 
-        if policy:
-            match = parser.OFPMatch(
-                in_port=in_port,
-                eth_type=ether_types.ETH_TYPE_IP,
-                ip_proto=proto_in_packet,
-                ipv4_src=ipv4_proto.src,
-                ipv4_dst=ipv4_proto.dst)
-            #print match
-            self.apply_policy(datapath, 1, match)
-            return
-
         if dst in self.mac_to_port[dpid]:
             out_port = self.mac_to_port[dpid][dst]
         else:
@@ -198,15 +147,76 @@ class SimpleSwitch14(app_manager.RyuApp):
 
         actions = [parser.OFPActionOutput(out_port)]
 
+        if eth.ethertype == ether_types.ETH_TYPE_IP:
+            # if datapath.id == 3:
+            #     print ipv4_proto
+            #     print ""
+            if ipv4_proto is not None:
+                proto_in_packet = in_proto.IPPROTO_IP
+                icmp_proto = pkt.get_protocol(icmp.icmp)
+                tcp_proto = pkt.get_protocol(tcp.tcp)
+                udp_proto = pkt.get_protocol(udp.udp)
+                if icmp_proto is not None:
+                    proto_in_packet = in_proto.IPPROTO_ICMP
+                if tcp_proto is not None:
+                    proto_in_packet = in_proto.IPPROTO_TCP
+                if udp_proto is not None:
+                    proto_in_packet = in_proto.IPPROTO_UDP
+                for item in self.rulesdict.keys():
+                    if ipv4_proto.src in item[0] and ipv4_proto.dst in item[1]:
+                        for data in self.rulesdict[item]:
+                            #print data
+                            if data[0] == 'P':
+                                break
+                            if data[1] == "IP" and data[0] == 'D' and ipv4_proto is not None:
+                                policy = 1
+                                print "IP packet blocked: "
+                                print pkt
+                                break
+                            if data[1] == "ICMP" and data[0] == 'D' and icmp_proto is not None:
+                                policy = 1
+                                print "ICMP packet blocked: "
+                                print pkt
+                                break
+                            if data[1] == "TCP" and data[0] == 'D' and tcp_proto is not None:
+                                policy = 1
+                                print "TCP packet blocked: "
+                                print pkt
+                                break
+                            if data[1] == "UDP" and data[0] == 'D' and udp_proto is not None:
+                                policy = 1
+                                print "UDP packet blocked: "
+                                print pkt
+                                break
+
         # install a flow to avoid packet_in next time
         if out_port != ofproto.OFPP_FLOOD:
-            match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
-            self.add_flow(datapath, 1, match, actions)
+            if ipv4_proto is not None:
+                match = parser.OFPMatch(
+                    in_port=in_port,
+                    eth_type=ether_types.ETH_TYPE_IP,
+                    ip_proto=proto_in_packet,
+                    ipv4_src=ipv4_proto.src,
+                    ipv4_dst=ipv4_proto.dst)
+                priority = 3
+            elif arp_proto is not None:
+                match = parser.OFPMatch(
+                    in_port=in_port,
+                    eth_type=ether_types.ETH_TYPE_ARP,
+                    arp_op=arp_proto.opcode,
+                    arp_spa=arp_proto.src_ip,
+                    arp_tpa=arp_proto.dst_ip)
+                priority = 2
+            else:
+                match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
+                priority = 1
+            self.add_flow(datapath, priority, match, actions, policy)
 
-        data = None
-        if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-            data = msg.data
+        if not policy:
+            data = None
+            if msg.buffer_id == ofproto.OFP_NO_BUFFER:
+                data = msg.data
 
-        out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
-                                  in_port=in_port, actions=actions, data=data)
-        datapath.send_msg(out)
+            out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
+                                      in_port=in_port, actions=actions, data=data)
+            datapath.send_msg(out)
