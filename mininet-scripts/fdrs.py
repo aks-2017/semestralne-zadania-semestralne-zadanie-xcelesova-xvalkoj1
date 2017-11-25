@@ -41,7 +41,7 @@ def show_rule(rulesdict):
         print 'There are not any rules stored'
     else:
         print ('These are our stored rules')
-        table.column_headers = ["Source IP", "Destination IP", "Permit/Deny", "Protocol"]
+        table.column_headers = ["Source IP", "Destination IP", "Action", "Protocol"]
         for key in rulesdict:
             for i in rulesdict[key]:
                 table.append_row([key[0], key[1], i[0], i[1]])
@@ -73,9 +73,9 @@ def check_dest_ip(flag):
 
 def check_action(flag):
     while True:
-        action = raw_input('Permit or Deny [P/D] ').upper()
+        action = raw_input('Deny [D] ').upper()
 
-        if action == 'P' or action == 'D':
+        if action == 'D':
             return action
         elif not action:
             if flag == 'f':
@@ -171,7 +171,7 @@ def find_rule(rulesdict):
     protocol = check_protocol('f')
 
     table = BeautifulTable()
-    table.column_headers = ["Source IP", "Destination IP", "Permit/Deny", "Protocol"]
+    table.column_headers = ["Source IP", "Destination IP", "Action", "Protocol"]
 
     if not source_ip and not dest_ip and not action and not protocol:
         print 'Please specify at least one atribute.'
