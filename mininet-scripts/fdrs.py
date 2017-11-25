@@ -7,8 +7,8 @@ import numpy as np
 from beautifultable import BeautifulTable
 from netaddr import valid_ipv4
 
-
 def add_rule(rulesdict):
+    new_rule = {}
 
     print ('Follow guide for adding rules\n')
     source_ip = check_source_ip('a')
@@ -22,10 +22,14 @@ def add_rule(rulesdict):
     if key not in rulesdict:
         rulesdict[key] = [data]
         np.save('stored_rules.npy', rulesdict)
+        new_rule[key] = [data]
+        thread.start_new_thread(clientSocket, (new_rule, "add", ))
         print('\nRule successfully stored\n')
     elif data not in rulesdict[key]:
         rulesdict[key].append(data)
         np.save('stored_rules.npy', rulesdict)
+        new_rule[key] = [data]
+        thread.start_new_thread(clientSocket, (new_rule, "add", ))
         print('\nRule successfully stored\n')
     else:
         print('\nSame rule already exist\n')
@@ -146,6 +150,9 @@ def delete_value(items, rulesdict, data):
     flag = raw_input('Do you want to delete [Y/N] ').upper()
     while 1 :
         if flag == 'Y':
+            rule_to_delete = {}
+            rule_to_delete[items] = [data]
+            thread.start_new_thread(clientSocket, (rule_to_delete, "del", ))
             rulesdict[items].remove(data)
             if not rulesdict[items]:
                 del rulesdict[items]
@@ -155,8 +162,6 @@ def delete_value(items, rulesdict, data):
             break
         print "Incorrect input"
         flag = raw_input('Do you want to delete [Y/N] ').upper()
-
-
 
 def find_rule(rulesdict):
     source_ip = check_source_ip('f')
@@ -232,23 +237,25 @@ def recvall(sock, count):
         count -= len(newbuf)
     return buf
 
-def serverSocket(rulesdict):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Vytvorenie soketu
-    host = socket.gethostname()  # Nazov lokalneho stroja
-    port = 1508  # Rezervovanie portu pre komunikaciu
-    s.bind((host, port))  # Priradenie hosta na port
+def clientSocket(rulesdict, action):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Create a socket object
+    host = socket.gethostname()  # Get local machine name
+    port = 1508  # Reserve a port for your service.
 
-    while True:
-        s.listen(5)  # Cakanie na pripojenie klienta
-        print 'Waiting for connection...'
-        c, addr = s.accept()  # Vytvorenie spojenia s klientom
+    try:
+        print "Trying to connect..."
+        s.connect((host, port))
         try:
-            print 'Got connection from', addr
+            print 'Connected to Ryu Controller'
+            data = pickle.dumps(action)
+            send_one_message(s, data)
             data = pickle.dumps(rulesdict)
-            send_one_message(c,data)
+            send_one_message(s, data)
         finally:
-            c.close()
-            print 'Client disconnected'
+            s.close  # Close the socket when done
+            print 'Socket closed'
+    except:
+        print "Cannot connect to Ryu Controller"
 
 def main():
 
@@ -270,7 +277,7 @@ def main():
         np.save('stored_rules.npy', rulesdict)
 
 
-    thread.start_new_thread(serverSocket, (rulesdict, ))
+    thread.start_new_thread(clientSocket, (rulesdict, "add", ))
 
     while(1):
 
@@ -291,6 +298,8 @@ def main():
         #elif 'l' in prepinac:
         #    rulesdict = np.load('stored_rules.npy').item()
         #    print rulesdict
+        elif 'u' in prepinac:
+            thread.start_new_thread(clientSocket, (rulesdict, "add", ))
         elif 'x' in prepinac:
             print ('Successfully finished')
             sys.exit()
