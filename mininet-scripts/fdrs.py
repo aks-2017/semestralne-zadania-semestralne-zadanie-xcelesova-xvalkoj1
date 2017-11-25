@@ -14,7 +14,7 @@ def add_rule(rulesdict):
     print ('Follow guide for adding rules\n')
     source_ip = check_source_ip('a')
     dest_ip = check_dest_ip('a')
-    action = check_action('a')
+    action = 'D'
     protocol = check_protocol('a')
 
     key = (source_ip,dest_ip)
@@ -71,19 +71,6 @@ def check_dest_ip(flag):
         else:
             print 'Not a valid IP address !'
 
-def check_action(flag):
-    while True:
-        action = raw_input('Deny [D] ').upper()
-
-        if action == 'D':
-            return action
-        elif not action:
-            if flag == 'f':
-                return action
-            else:
-                print 'Incorrenct input !'
-        else:
-            print 'Incorrect input !'
 
 def check_protocol(flag):
     while True:
@@ -101,7 +88,7 @@ def check_protocol(flag):
 def remove_rule(rulesdict):
     source_ip = check_source_ip('f')
     dest_ip = check_dest_ip('f')
-    action = check_action('f')
+    action = 'D'
     protocol = check_protocol('f')
 
     if not source_ip and not dest_ip and not action and not protocol:
@@ -167,7 +154,7 @@ def delete_value(items, rulesdict, data):
 def find_rule(rulesdict):
     source_ip = check_source_ip('f')
     dest_ip = check_dest_ip('f')
-    action = check_action('f')
+    action = 'D'
     protocol = check_protocol('f')
 
     table = BeautifulTable()
