@@ -3,6 +3,7 @@ import struct
 import sys
 import thread
 import pickle
+import time
 import numpy as np
 from beautifultable import BeautifulTable
 from netaddr import valid_ipv4
@@ -242,20 +243,23 @@ def clientSocket(rulesdict, action):
     host = socket.gethostname()  # Get local machine name
     port = 1508  # Reserve a port for your service.
 
-    try:
-        print "Trying to connect..."
-        s.connect((host, port))
+    print "Trying to connect..."
+    while 1:
         try:
-            print 'Connected to Ryu Controller'
-            data = pickle.dumps(action)
-            send_one_message(s, data)
-            data = pickle.dumps(rulesdict)
-            send_one_message(s, data)
-        finally:
-            s.close  # Close the socket when done
-            print 'Socket closed'
-    except:
-        print "Cannot connect to Ryu Controller"
+            s.connect((host, port))
+            try:
+                print 'Connected to Ryu Controller'
+                data = pickle.dumps(action)
+                send_one_message(s, data)
+                data = pickle.dumps(rulesdict)
+                send_one_message(s, data)
+            finally:
+                s.close  # Close the socket when done
+                print 'Socket closed'
+                break
+        except:
+            #print "Cannot connect to Ryu Controller"
+            time.sleep(1)
 
 def main():
 

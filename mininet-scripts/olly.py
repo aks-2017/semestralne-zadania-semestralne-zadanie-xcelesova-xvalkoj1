@@ -31,13 +31,14 @@ def update(rulesdict, action):
     rule_proto = 0
     for item in rulesdict.keys():
         for datapath in flows.keys():
-            for mod in flows[datapath]:
-                match = mod.match
+            for actions, inst, match, priority in flows[datapath]:
                 try:
                     if match['ipv4_src'] == item[0] and match['ipv4_dst'] == item[1]:
                         for data in rulesdict[item]:
                             if data[1] == "IP":
                                 rule_proto = in_proto.IPPROTO_IP
+                                update_flow(action, datapath, actions, inst, match, priority, data)
+                                continue
                             elif data[1] == "ICMP":
                                 rule_proto = in_proto.IPPROTO_ICMP
                             elif data[1] == "TCP":
@@ -45,74 +46,68 @@ def update(rulesdict, action):
                             elif data[1] == "UDP":
                                 rule_proto = in_proto.IPPROTO_UDP
                             if match['ip_proto'] == rule_proto:
-                                try:
-                                    port = mod.instructions[0].actions[0].port
-                                    if data[0] == 'D':
-                                        print "Found mismatch, applying new rule..."
-                                        ofproto = datapath.ofproto
-                                        new_mod = datapath.ofproto_parser.OFPFlowMod(
-                                            datapath=datapath,
-                                            match=match,
-                                            cookie=0,
-                                            command=ofproto.OFPFC_DELETE,
-                                            idle_timeout=0,
-                                            hard_timeout=0,
-                                            priority=mod.priority,
-                                            out_port=ofproto.OFPP_ANY,
-                                            out_group=ofproto.OFPG_ANY)
-                                        datapath.send_msg(new_mod)
-                                        print 'Rule applied on %d', datapath.id
-                                    if action == "del":
-                                        print "Found match on deleting rule. Deleting..."
-                                        ofproto = datapath.ofproto
-                                        new_mod = datapath.ofproto_parser.OFPFlowMod(
-                                            datapath=datapath,
-                                            match=match,
-                                            cookie=0,
-                                            command=ofproto.OFPFC_DELETE,
-                                            idle_timeout=0,
-                                            hard_timeout=0,
-                                            priority=mod.priority,
-                                            out_port=ofproto.OFPP_ANY,
-                                            out_group=ofproto.OFPG_ANY)
-                                        datapath.send_msg(new_mod)
-                                        print "Delete successful"
-                                except:
-                                    if data[0] == 'P':
-                                        print "Found mismatch, applying new rule..."
-                                        ofproto = datapath.ofproto
-                                        new_mod = datapath.ofproto_parser.OFPFlowMod(
-                                            datapath=datapath,
-                                            match=match,
-                                            cookie=0,
-                                            command=ofproto.OFPFC_DELETE,
-                                            idle_timeout=0,
-                                            hard_timeout=0,
-                                            priority=mod.priority,
-                                            out_port=ofproto.OFPP_ANY,
-                                            out_group=ofproto.OFPG_ANY)
-                                        datapath.send_msg(new_mod)
-                                        print 'Rule applied on %d', datapath.id
-                                    if action == "del":
-                                        print "Found match on deleting rule. Deleting..."
-                                        ofproto = datapath.ofproto
-                                        new_mod = datapath.ofproto_parser.OFPFlowMod(
-                                            datapath=datapath,
-                                            match=match,
-                                            cookie=0,
-                                            command=ofproto.OFPFC_DELETE,
-                                            idle_timeout=0,
-                                            hard_timeout=0,
-                                            priority=mod.priority,
-                                            out_port=ofproto.OFPP_ANY,
-                                            out_group=ofproto.OFPG_ANY)
-                                        datapath.send_msg(new_mod)
-                                        print "Delete successful"
+                                update_flow(action, datapath, actions, inst, match, priority, data)
                 except:
                     pass
 
 
-
+def update_flow(action, datapath, actions, inst, match, priority, data):
+    try:
+        port = inst[0].actions[0].port
+        #Actual flow is set to PERMIT
+        if data[0] == 'D':
+            print "Found mismatch, applying new rule for DENY..."
+            ofproto = datapath.ofproto
+            parser = datapath.ofproto_parser
+            new_inst = [parser.OFPInstructionActions(ofproto.OFPIT_CLEAR_ACTIONS, [])]
+            new_mod = parser.OFPFlowMod(
+                datapath=datapath,
+                match=match,
+                command=ofproto.OFPFC_MODIFY,
+                priority=priority,
+                instructions=new_inst)
+            datapath.send_msg(new_mod)
+            tuple = actions, inst, match, priority
+            flows[datapath].remove(tuple)
+            tuple = actions, new_inst, match, priority
+            flows[datapath].append(tuple)
+            print 'Rule applied on %d' % datapath.id
+        if action == "del":
+            print "Found match on rule to delete. Deleting blocking ..."
+            ofproto = datapath.ofproto
+            parser = datapath.ofproto_parser
+            new_inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
+            new_mod = datapath.ofproto_parser.OFPFlowMod(
+                datapath=datapath,
+                match=match,
+                command=ofproto.OFPFC_MODIFY,
+                priority=priority,
+                instructions=new_inst)
+            datapath.send_msg(new_mod)
+            tuple = actions, inst, match, priority
+            flows[datapath].remove(tuple)
+            tuple = actions, new_inst, match, priority
+            flows[datapath].append(tuple)
+            print "Delete successful on %d" % datapath.id
+    except:
+        #Actual flow is set to DENY
+        if data[0] == 'P' or action == "del":
+            print "Found mismatch, applying new rule for PERMIT..."
+            ofproto = datapath.ofproto
+            parser = datapath.ofproto_parser
+            new_inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
+            new_mod = datapath.ofproto_parser.OFPFlowMod(
+                datapath=datapath,
+                match=match,
+                command=ofproto.OFPFC_MODIFY,
+                priority=priority,
+                instructions=new_inst)
+            datapath.send_msg(new_mod)
+            tuple = actions, inst, match, priority
+            flows[datapath].remove(tuple)
+            tuple = actions, new_inst, match, priority
+            flows[datapath].append(tuple)
+            print 'Rule applied on %d' % datapath.id
 
 def send_one_message(sock, data):
     length = len(data)
@@ -204,10 +199,11 @@ class SimpleSwitch14(app_manager.RyuApp):
 
         mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
                                 match=match, instructions=inst)
+        data = (actions, inst, match, priority)
         if datapath not in flows:
-            flows[datapath] = [mod]
+            flows[datapath] = [data]
         else:
-            flows[datapath].append(mod)
+            flows[datapath].append(data)
         datapath.send_msg(mod)
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
@@ -217,15 +213,19 @@ class SimpleSwitch14(app_manager.RyuApp):
             if action == "add":
                 for item in rule.keys():
                     if item not in self.rulesdict:
-                        self.rulesdict[item] = rule[item]
+                        for value in rule[item]:
+                            self.rulesdict[item] = [value]
                     else:
-                        self.rulesdict[item].append(rule[item])
+                        for value in rule[item]:
+                            self.rulesdict[item].append(value)
             elif action == "del":
                 for item in rule.keys():
                     for data in rule[item]:
+                        #print "Data to delete: ", rule
                         self.rulesdict[item].remove(data)
                         if not self.rulesdict[item]:
                             del self.rulesdict[item]
+            print "Rules updated"
             print self.rulesdict
         except:
             pass
@@ -286,7 +286,7 @@ class SimpleSwitch14(app_manager.RyuApp):
                 for item in self.rulesdict.keys():
                     if ipv4_proto.src in item[0] and ipv4_proto.dst in item[1]:
                         for data in self.rulesdict[item]:
-                            #print data
+                            print data
                             if data[0] == 'P':
                                 break
                             if data[1] == "IP" and data[0] == 'D' and ipv4_proto is not None:
